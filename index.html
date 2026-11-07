@@ -1,0 +1,946 @@
+<?php
+// index.php - Poring Land Hardcore Brutal Edition
+require_once 'koneksi.php';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    header('Content-Type: application/json');
+    if ($_POST['action'] === 'save') {
+        try {
+            $sql = "UPDATE player_save SET level = ?, exp = ?, max_exp = ?, hp = ?, max_hp = ?, sp = ?, max_sp = ?, gold = ?, bonus_dmg = ?, weapon_tier = ?, bonus_hp = ?, armor_tier = ?, refine_level = ?, durability = ?, hardcore_multiplier = ?, exp_multiplier = ?, crit_rate = ?, monster_max_hp = ?, monster_hp = ?, monster_level = ?, kill_count = ?, is_mvp = ? WHERE id = 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                $_POST['level'], $_POST['exp'], $_POST['max_exp'], $_POST['hp'], $_POST['max_hp'], 
+                $_POST['sp'], $_POST['max_sp'], $_POST['gold'], $_POST['bonus_dmg'], $_POST['weapon_tier'], 
+                $_POST['bonus_hp'], $_POST['armor_tier'], $_POST['refine_level'], $_POST['durability'], 
+                $_POST['hardcore_multiplier'], $_POST['exp_multiplier'], $_POST['crit_rate'], 
+                $_POST['monster_max_hp'], $_POST['monster_hp'], $_POST['monster_level'], 
+                $_POST['kill_count'], $_POST['is_mvp']
+            ]);
+            echo json_encode(['status' => 'success']);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    } elseif ($_POST['action'] === 'reset') {
+        try {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM player_save WHERE id = 1");
+            $stmt->execute();
+            if ($stmt->fetchColumn() == 0) {
+                $pdo->exec("INSERT INTO player_save (id, level, exp, max_exp, hp, max_hp, sp, max_sp, gold, weapon_tier, armor_tier, durability, hardcore_multiplier, exp_multiplier, crit_rate, monster_max_hp, monster_hp, monster_level, kill_count, is_mvp) VALUES (1, 1, 0, 100, 500, 500, 50, 50, 500, 0, 0, 100, 1, 1, 10, 50, 50, 1, 0, 0)");
+            } else {
+                $pdo->exec("UPDATE player_save SET level=1, exp=0, max_exp=100, hp=500, max_hp=500, sp=50, max_sp=50, gold=500, bonus_dmg=0, weapon_tier=0, bonus_hp=0, armor_tier=0, refine_level=0, durability=100, hardcore_multiplier=1, exp_multiplier=1, crit_rate=10, monster_max_hp=50, monster_hp=50, monster_level=1, kill_count=0, is_mvp=0 WHERE id=1");
+            }
+            echo json_encode(['status' => 'success']);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+    exit;
+}
+
+$stmt = $pdo->prepare("SELECT * FROM player_save WHERE id = 1");
+$stmt->execute();
+$player = $stmt->fetch();
+
+if (!$player) {
+    $pdo->exec("INSERT INTO player_save (id, level, exp, max_exp, hp, max_hp, sp, max_sp, gold, weapon_tier, armor_tier, durability, hardcore_multiplier, exp_multiplier, crit_rate, monster_max_hp, monster_hp, monster_level, kill_count, is_mvp) VALUES (1, 1, 0, 100, 500, 500, 50, 50, 500, 0, 0, 100, 1, 1, 10, 50, 50, 1, 0, 0)");
+    $stmt->execute();
+    $player = $stmt->fetch();
+}
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poring Land - Skill Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Nunito', 'sans-serif'], display: ['Fredoka', 'sans-serif'] } } } }</script>
+    <style>
+        .poring-avatar { background-size: 85% !important; background-repeat: no-repeat; background-position: center !important; width: 55px; height: 55px; border-radius: 9999px; border: 3px solid rgba(255, 255, 255, 0.8); box-shadow: 0 4px 10px rgba(0,0,0,0.15); cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .poring-avatar:hover { transform: scale(1.15) translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        .poring-avatar.locked { filter: grayscale(100%) brightness(50%); cursor: not-allowed; }
+        body.theme-poring { background: linear-gradient(135deg, #fff5f7, #f3e8ff); color: #475569; }
+        body.theme-poring .hero-box { background: linear-gradient(to right, #ff9ebb, #9d76c1, #818cf8); }
+        body.theme-poring .accent-badge { background: #ffe4e6; color: #e11d48; border-color: #fecdd3; }
+        body.theme-drops { background: linear-gradient(135deg, #fef3c7, #fed7aa); color: #78350f; }
+        body.theme-drops .hero-box { background: linear-gradient(to right, #d97706, #b45309, #78350f); }
+        body.theme-drops .accent-badge { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+        body.theme-poporing { background: linear-gradient(135deg, #ecfdf5, #d1fae5); color: #065f46; }
+        body.theme-poporing .hero-box { background: linear-gradient(to right, #10b981, #059669, #047857); }
+        body.theme-poporing .accent-badge { background: #d1fae5; color: #047857; border-color: #a7f3d0; }
+        body.theme-marin { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); color: #0369a1; }
+        body.theme-marin .hero-box { background: linear-gradient(to right, #38bdf8, #0284c7, #0369a1); }
+        body.theme-marin .accent-badge { background: #e0f2fe; color: #0284c7; border-color: #bae6fd; }
+        body.theme-aquaring { background: linear-gradient(135deg, #eff6ff, #1e40af); color: #1e3a8a; }
+        body.theme-aquaring .hero-box { background: linear-gradient(to right, #2563eb, #1d4ed8, #1e3a8a); }
+        body.theme-aquaring .accent-badge { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+        body.theme-metaling { background: linear-gradient(135deg, #f1f5f9, #cbd5e1); color: #334155; }
+        body.theme-metaling .hero-box { background: linear-gradient(to right, #64748b, #475569, #1e293b); }
+        body.theme-metaling .accent-badge { background: #e2e8f0; color: #475569; border-color: #cbd5e1; }
+        body.theme-magmaring { background: linear-gradient(135deg, #fff1f2, #ffe4e6); color: #9f1239; }
+        body.theme-magmaring .hero-box { background: linear-gradient(to right, #f43f5e, #e11d48, #9f1239); }
+        body.theme-magmaring .accent-badge { background: #ffe4e6; color: #be123c; border-color: #fecdd3; }
+        body.theme-santa { background: linear-gradient(135deg, #fef2f2, #fee2e2); color: #991b1b; }
+        body.theme-santa .hero-box { background: linear-gradient(to right, #dc2626, #b91c1c, #047857); }
+        body.theme-santa .accent-badge { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+        body.theme-angeling { background: linear-gradient(135deg, #fefce8, #fef08a); color: #713f12; }
+        body.theme-angeling .hero-box { background: linear-gradient(to right, #eab308, #ca8a04, #a16207); }
+        body.theme-angeling .accent-badge { background: #fef9c3; color: #a16207; border-color: #fde047; }
+        body.theme-archangeling { background: linear-gradient(135deg, #faf5ff, #f3e8ff); color: #581c87; }
+        body.theme-archangeling .hero-box { background: linear-gradient(to right, #a855f7, #9333ea, #6b21a8); }
+        body.theme-archangeling .accent-badge { background: #f3e8ff; color: #7e22ce; border-color: #e9d5ff; }
+        @keyframes hitEffect { 0% { transform: scale(1); } 50% { transform: scale(0.9) rotate(-5deg); filter: brightness(1.5); } 100% { transform: scale(1); } }
+        .hit-anim { animation: hitEffect 0.15s ease; }
+        @keyframes boxShake { 0% { transform: translate(0, 0) rotate(0deg); } 20% { transform: translate(-5px, 5px) rotate(-5deg); } 40% { transform: translate(5px, -5px) rotate(5deg); } 60% { transform: translate(-5px, -5px) rotate(-3deg); } 80% { transform: translate(5px, 5px) rotate(3deg); } 100% { transform: translate(0, 0) rotate(0deg); } }
+        .box-shake { animation: boxShake 0.4s ease-in-out infinite; }
+        .stop-cursor:hover { cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='red' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'></circle><line x1='4.93' y1='4.93' x2='19.07' y2='19.07'></line></svg>"), not-allowed; }
+    </style>
+</head>
+<body id="main-body" class="theme-poring min-h-screen font-sans transition-colors duration-500">
+
+    <div class="bg-white/70 backdrop-blur-md py-3 shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between overflow-x-auto">
+            <div class="flex items-center space-x-3 md:space-x-4">
+                <span class="text-xs font-display font-bold uppercase tracking-wider hidden lg:inline-block mr-2 opacity-85">✨ Biome (Multiply x1-5):</span>
+                <?php 
+                $porings = [
+                    ["key" => "poring", "name" => "Poring", "file" => "poring.gif", "min_lv" => 1, "hardcore" => 1],
+                    ["key" => "drops", "name" => "Drops", "file" => "drops.gif", "min_lv" => 10, "hardcore" => 2],
+                    ["key" => "poporing", "name" => "Poporing", "file" => "poporing.gif", "min_lv" => 20, "hardcore" => 3],
+                    ["key" => "marin", "name" => "Marin", "file" => "marin.gif", "min_lv" => 30, "hardcore" => 4],
+                    ["key" => "aquaring", "name" => "Aquaring", "file" => "aquaring.gif", "min_lv" => 40, "hardcore" => 5],
+                    ["key" => "metaling", "name" => "Metaling", "file" => "metaling.gif", "min_lv" => 50, "hardcore" => 1],
+                    ["key" => "magmaring", "name" => "Magmaring", "file" => "magmaring.gif", "min_lv" => 60, "hardcore" => 2],
+                    ["key" => "santa", "name" => "Santa Poring", "file" => "santa-poring.gif", "min_lv" => 70, "hardcore" => 3],
+                    ["key" => "angeling", "name" => "Angeling", "file" => "angeling.gif", "min_lv" => 80, "hardcore" => 4],
+                    ["key" => "archangeling", "name" => "Archangeling", "file" => "archangeling.gif", "min_lv" => 90, "hardcore" => 5],
+                ];
+                foreach ($porings as $index => $p):
+                    $multiplyIndex = ($index % 5) + 1;
+                ?>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar <?= $p['min_lv'] > 1 ? 'locked' : ''; ?>" id="avatar-<?= $p['key']; ?>" style="background-image: url('assets/images/<?= $p['file']; ?>');" onclick="trySelectTheme('<?= $p['key']; ?>', '<?= $p['name']; ?>', <?= $p['min_lv']; ?>, <?= $multiplyIndex; ?>)" title="<?= $p['name']; ?> (x<?= $multiplyIndex; ?>)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x<?= $multiplyIndex; ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <div>
+                <a href="http://localhost/kasir_offline/home.php" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition whitespace-nowrap inline-flex items-center gap-1">🚪 Exit Games</a>
+            </div>
+        </div>
+    </div>
+
+    <header class="max-w-6xl mx-auto px-6 pt-6">
+        <nav class="bg-white/80 backdrop-blur-md px-6 py-4 rounded-3xl shadow-lg flex items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl shadow-md animate-bounce">📊</div>
+                <div>
+                    <span class="font-display text-xl tracking-wide font-bold">PORING<span class="opacity-70">LAND</span></span>
+                    <span class="block text-[10px] font-semibold uppercase tracking-widest text-indigo-600">Skill Edition UI</span>
+                </div>
+            </div>
+            <div>
+                <span id="active-theme-label" class="text-xs accent-badge font-semibold px-3 py-1.5 rounded-full">✨ Biome: Poring (x1)</span>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        <div class="hero-box relative rounded-3xl p-8 md:p-12 text-white shadow-xl overflow-hidden transition-all duration-500">
+            <div class="absolute -right-10 -bottom-10 text-9xl opacity-20 select-none">📊</div>
+            <div class="relative z-10 max-w-2xl">
+                <span class="bg-black/35 backdrop-blur-md text-xs font-semibold px-4 py-1 rounded-full uppercase tracking-widest inline-block mb-2">Skill & Immortality Dashboard</span>
+                <h1 id="hero-title" class="font-display text-3xl md:text-5xl font-bold mb-4 leading-tight">Poring Land Latest Edition! ⚔️</h1>
+                <p id="hero-title-desc" class="text-white/90 text-xs md:text-sm mt-1">Sistem game sepenuhnya sinkron dengan DB dan fitur terbaru Anda.</p>
+            </div>
+        </div>
+
+        <div class="bg-white/90 backdrop-blur-md p-6 rounded-3xl shadow-lg space-y-4">
+            <div class="flex items-center justify-between pb-3">
+                <h3 class="font-display text-base font-bold text-slate-800 flex items-center gap-2">🛡️ Panel Status & Statistik Hero</h3>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-full" id="char-tier-info">Poring Slayer</span>
+                    <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition whitespace-nowrap">🔄 Reset DB (0)</button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-3 text-xs font-semibold py-3 px-4 bg-slate-100/70 rounded-2xl shadow-inner">
+                <div class="bg-white px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-2">
+                    <span class="font-bold text-indigo-600 uppercase text-sm" id="char-level-badge">Lv. 1 Hero</span>
+                </div>
+                <div class="flex flex-col gap-1 w-28">
+                    <div class="flex justify-between text-[11px] font-bold text-red-700 px-0.5"><span>HP</span><span id="hp-text">500</span></div>
+                    <div class="w-full bg-red-100 rounded-full h-3.5 p-0.5"><div id="hp-bar" class="bg-red-500 h-full rounded-full transition-all duration-300" style="width: 100%;"></div></div>
+                </div>
+                <div class="flex flex-col gap-1 w-28">
+                    <div class="flex justify-between text-[11px] font-bold text-blue-700 px-0.5"><span>SP</span><span id="sp-text">50</span></div>
+                    <div class="w-full bg-blue-100 rounded-full h-3.5 p-0.5"><div id="sp-bar" class="bg-blue-500 h-full rounded-full transition-all duration-300" style="width: 100%;"></div></div>
+                </div>
+                <div class="flex flex-col gap-1 w-32">
+                    <div class="flex justify-between text-[11px] font-bold text-amber-800 px-0.5"><span>EXP</span><span id="exp-text">0/100</span></div>
+                    <div class="w-full bg-amber-100 rounded-full h-3.5 p-0.5"><div id="exp-bar" class="bg-amber-500 h-full rounded-full transition-all duration-300" style="width: 0%;"></div></div>
+                </div>
+                <div class="bg-indigo-100 text-indigo-800 px-3 py-2 rounded-xl font-bold text-sm shadow-sm" id="skill-point-badge">✨ SP: 0</div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-9 gap-3 text-center">
+                <div class="bg-slate-50 p-3 rounded-2xl"><span class="block text-[10px] text-slate-400 uppercase font-bold">Attack Power</span><span class="text-base font-extrabold text-indigo-600" id="ui-stat-dmg">5 DMG</span></div>
+                <div class="bg-slate-50 p-3 rounded-2xl"><span class="block text-[10px] text-slate-400 uppercase font-bold">Defense (DEF)</span><span class="text-base font-extrabold text-emerald-600" id="ui-stat-def">0 DEF</span></div>
+                <div class="bg-slate-50 p-3 rounded-2xl"><span class="block text-[10px] text-slate-400 uppercase font-bold">Damage Reduction</span><span class="text-base font-extrabold text-teal-600" id="ui-stat-reduction">0%</span></div>
+                <div class="bg-slate-50 p-3 rounded-2xl"><span class="block text-[10px] text-slate-400 uppercase font-bold">Critical Rate</span><span class="text-base font-extrabold text-amber-600" id="ui-stat-crit">10%</span></div>
+                <div class="bg-slate-50 p-3 rounded-2xl"><span class="block text-[10px] text-slate-400 uppercase font-bold">Crit Defense</span><span class="text-base font-extrabold text-blue-600" id="ui-stat-critdef">0%</span></div>
+                <div class="bg-slate-50 p-3 rounded-2xl"><span class="block text-[10px] text-slate-400 uppercase font-bold">Crit Resistance</span><span class="text-base font-extrabold text-purple-600" id="ui-stat-critres">0%</span></div>
+                <div class="bg-slate-50 p-3 rounded-2xl"><span class="block text-[10px] text-slate-400 uppercase font-bold">Gear Durability</span><span class="text-base font-extrabold text-rose-600" id="ui-stat-durability">100%</span></div>
+                <div class="bg-amber-50 p-3 rounded-2xl"><span class="block text-[10px] text-amber-700 uppercase font-bold">Artifact EXP</span><span class="text-base font-extrabold text-amber-800" id="ui-stat-artifact">x1 (Std)</span></div>
+                <div class="bg-yellow-50 p-3 rounded-2xl"><span class="block text-[10px] text-yellow-700 uppercase font-bold">Lucky Artifact</span><span class="text-base font-extrabold text-yellow-800" id="ui-stat-spin-art">x1 (Std)</span></div>
+            </div>
+        </div>
+
+        <div class="bg-white/90 backdrop-blur-md p-6 rounded-3xl shadow-lg space-y-4">
+            <div class="flex items-center justify-between pb-3">
+                <h3 class="font-display text-base font-bold text-indigo-900 flex items-center gap-2">✨ Skill Pohon & Blessing</h3>
+                <span class="text-xs bg-indigo-600 text-white font-bold px-3 py-1 rounded-full" id="available-sp-label">Skill Points Tersedia: 0</span>
+            </div>
+            
+            <div id="wrapper-blessing" class="flex flex-col md:flex-row items-center justify-between bg-indigo-50/50 p-4 rounded-2xl gap-4 transition-all">
+                <div class="space-y-1 text-left w-full">
+                    <div class="flex items-center gap-2"><span class="text-2xl">🌟</span><h4 class="font-bold text-sm text-indigo-950">Blessing Skill (<span id="blessing-level">0</span>/10)</h4></div>
+                    <p class="text-xs text-slate-600">Setiap level meningkatkan <b class="text-indigo-600">+50 Attack</b> dan <b class="text-amber-600">+1% Crit Rate</b>.</p>
+                </div>
+                <button onclick="upgradeBlessing()" id="upgrade-blessing-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap">+ UP (1 SP)</button>
+            </div>
+
+            <div id="wrapper-divine" class="flex flex-col md:flex-row items-center justify-between bg-emerald-50/50 p-4 rounded-2xl gap-4 transition-all">
+                <div class="space-y-1 text-left w-full">
+                    <div class="flex items-center gap-2"><span class="text-2xl">🛡️</span><h4 class="font-bold text-sm text-emerald-950">Divine Protection Skill (<span id="divine-level">0</span>/10)</h4></div>
+                    <p class="text-xs text-slate-600">Meningkatkan DEF dan Mengurangi Damage Monster (<span id="divine-effect-desc">Belum aktif</span>).</p>
+                </div>
+                <button onclick="upgradeDivine()" id="upgrade-divine-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap">+ UP (1 SP)</button>
+            </div>
+
+            <div id="wrapper-iron" class="flex flex-col md:flex-row items-center justify-between bg-amber-50/50 p-4 rounded-2xl gap-4 transition-all">
+                <div class="space-y-1 text-left w-full">
+                    <div class="flex items-center gap-2"><span class="text-2xl">❤️‍🔥</span><h4 class="font-bold text-sm text-amber-950">Iron Heart Skill (<span id="iron-level">0</span>/10) - 2 SP/Lv</h4></div>
+                    <p class="text-xs text-slate-600">Retensi durabilitas bertahap & Pertahanan Absolut anti-hancur saat 0% (<span id="iron-effect-desc">Belum aktif</span>).</p>
+                </div>
+                <button onclick="upgradeIron()" id="upgrade-iron-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap">+ UP (2 SP)</button>
+            </div>
+
+            <div id="wrapper-money" class="flex flex-col md:flex-row items-center justify-between bg-yellow-50/70 p-4 rounded-2xl gap-4 transition-all">
+                <div class="space-y-1 text-left w-full">
+                    <div class="flex items-center gap-2"><span class="text-2xl">💰</span><h4 class="font-bold text-sm text-yellow-950">Money Money Money!!! (<span id="money-level">0</span>/<span id="money-max-level">10</span>) - 1 SP/Lv</h4></div>
+                    <p class="text-xs text-slate-600">Meningkatkan Gold dari monster (Total: <span id="money-effect-desc" class="font-bold text-amber-600">+0% Gold</span>). <span id="breakthrough-status" class="text-indigo-600 font-bold"></span></p>
+                </div>
+                <button onclick="upgradeMoney()" id="upgrade-money-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap">+ UP (1 SP)</button>
+            </div>
+
+            <div id="wrapper-wealth" class="flex flex-col md:flex-row items-center justify-between bg-amber-100/70 p-4 rounded-2xl gap-4 transition-all border border-amber-300">
+                <div class="space-y-1 text-left w-full">
+                    <div class="flex items-center gap-2"><span class="text-2xl">🌟</span><h4 class="font-bold text-sm text-amber-950">Come to me Wealthy!! (<span id="wealth-level">0</span>/10) - 2 SP & 50.000 Gold/Lv</h4></div>
+                    <p class="text-xs text-slate-700">Setiap Kill Monster menambah <b class="text-amber-800" id="wealth-monster-bonus">+0 Lucky Coin</b>, MVP <b class="text-amber-800" id="wealth-mvp-bonus">+0 Lucky Coin</b>.</p>
+                </div>
+                <button onclick="upgradeWealth()" id="upgrade-wealth-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap">+ UP (2 SP & 50k Gold)</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white/90 backdrop-blur p-6 rounded-3xl shadow-sm flex flex-col justify-between text-center">
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 id="arena-title" class="font-display text-lg font-bold">⚔️ Extreme Battle Arena</h3>
+                        <span id="monster-level-label" class="text-xs bg-red-100 text-red-700 font-bold px-2.5 py-1 rounded-full">Wild Poring (Lv. 1)</span>
+                    </div>
+                    <p class="text-xs opacity-75 mb-2">Klik monster untuk melancarkan serangan!</p>
+                    <p class="text-[10px] text-emerald-600 font-bold mb-4" id="regen-status">Regen: +1 HP/SP per 3 detik (Immortal Mode Active)</p>
+                    <div class="w-full bg-slate-200 rounded-full h-4 p-0.5 mb-4">
+                        <div id="monster-hp-bar" class="bg-red-500 h-full rounded-full transition-all duration-150" style="width: 100%;"></div>
+                        <div class="text-[10px] font-bold text-slate-700 -mt-4" id="monster-hp-text">HP: 50 / 50</div>
+                    </div>
+                    <div class="flex justify-center my-4">
+                        <div id="monster-target" onclick="attackMonster()" class="w-24 h-24 bg-pink-100 border-4 border-rose-500 rounded-full flex items-center justify-center text-4xl shadow-lg cursor-pointer select-none hover:scale-105 active:scale-95 transition">🍮</div>
+                    </div>
+                </div>
+                <div id="clicker-log" class="text-xs font-bold text-slate-600 bg-slate-50 p-2.5 rounded-2xl">Sistem siap. Hero Anda kebal kematian dan terus meregenerasi HP/SP.</div>
+            </div>
+
+            <div class="bg-white/90 backdrop-blur p-6 rounded-3xl shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-display text-lg font-bold flex items-center gap-2">🛠️ Blacksmith & Artifact Shop</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-xl font-bold shadow-sm" id="shop-gold-badge">🪙 500 Gold</span>
+                            <span class="text-xs bg-yellow-500 text-white font-bold px-2.5 py-1 rounded-full">Shop Store</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-1 mb-3">
+                        <button onclick="switchTab('weapon')" id="tab-weapon" class="flex-1 bg-indigo-600 text-white font-bold text-[11px] py-2 rounded-xl transition">Senjata</button>
+                        <button onclick="switchTab('armor')" id="tab-armor" class="flex-1 bg-slate-200 text-slate-700 font-bold text-[11px] py-2 rounded-xl transition">Armor</button>
+                        <button onclick="switchTab('potion')" id="tab-potion" class="flex-1 bg-slate-200 text-slate-700 font-bold text-[11px] py-2 rounded-xl transition">Potion</button>
+                        <button onclick="switchTab('artifact')" id="tab-artifact" class="flex-1 bg-slate-200 text-slate-700 font-bold text-[11px] py-2 rounded-xl transition">Artifact</button>
+                    </div>
+
+                    <div id="shop-weapon-container" class="space-y-3 max-h-56 overflow-y-auto pr-1">
+                        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl">
+                            <div class="text-left">
+                                <h4 class="font-bold text-xs" id="shop-weapon-name">Novice Knife (+5 DMG)</h4>
+                                <span class="text-[10px] text-slate-500" id="shop-weapon-price">Harga: 🪙 100 Gold</span>
+                            </div>
+                            <button onclick="buyWeapon()" id="buy-weapon-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition">Beli</button>
+                        </div>
+                        <div id="weapon-shop-log" class="text-xs font-bold text-indigo-600 bg-indigo-50 p-2.5 rounded-2xl">Status Senjata: Tangan Kosong</div>
+                    </div>
+
+                    <div id="shop-armor-container" class="space-y-3 hidden max-h-56 overflow-y-auto pr-1">
+                        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl">
+                            <div class="text-left">
+                                <h4 class="font-bold text-xs" id="shop-armor-name">Cloth Armor (+50 HP)</h4>
+                                <span class="text-[10px] text-slate-500" id="shop-armor-price">Harga: 🪙 100 Gold</span>
+                            </div>
+                            <button onclick="buyArmor()" id="buy-armor-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition">Beli</button>
+                        </div>
+                        <div id="armor-shop-log" class="text-xs font-bold text-blue-600 bg-blue-50 p-2.5 rounded-2xl">Status Armor: Tanpa Pelindung</div>
+                    </div>
+
+                    <div id="shop-potion-container" class="space-y-2 hidden max-h-56 overflow-y-auto pr-1">
+                        <div id="potion-shop-slot" class="space-y-2"></div>
+                        <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-2xl">
+                            <div class="text-left"><h4 class="font-bold text-xs">💙 Blue Potion (Full SP)</h4><span class="text-[10px] text-slate-500">Harga: 🪙 40 Gold</span></div>
+                            <button onclick="buyItem('sp')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition">Beli</button>
+                        </div>
+                    </div>
+
+                    <div id="shop-artifact-container" class="space-y-3 hidden max-h-56 overflow-y-auto pr-1">
+                        <div class="flex items-center justify-between bg-sky-50 p-2.5 rounded-2xl">
+                            <div class="text-left"><h4 class="font-bold text-xs text-sky-900">🔧 Emergency Forge Repair (100% Durability)</h4><span class="text-[10px] text-sky-700">Harga: 🪙 150 Gold</span></div>
+                            <button onclick="repairDurabilityInstan()" class="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition">Repair</button>
+                        </div>
+
+                        <!-- Slot Artifact EXP (Maju bertahap) -->
+                        <div id="artifact-exp-slot"></div>
+
+                        <!-- Slot Artifact Lucky (Maju bertahap) -->
+                        <div id="artifact-spin-slot"></div>
+
+                        <div id="artifact-shop-log" class="text-xs font-bold text-teal-600 bg-teal-50 p-2.5 rounded-2xl">Status Artifact: Aktif</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-amber-500 via-yellow-500 to-amber-600 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 text-9xl opacity-10 select-none">🎁</div>
+            <div class="relative z-10 max-w-3xl mx-auto text-center space-y-6">
+                <div>
+                    <div class="flex items-center justify-center gap-3 mb-2">
+                        <span class="bg-black/35 backdrop-blur-md text-xs font-semibold px-4 py-1 rounded-full uppercase tracking-widest inline-block">Enlarged Lucky Box & Prize Pool</span>
+                        <span class="bg-amber-800 text-amber-100 font-bold text-xs px-3 py-1 rounded-full shadow animate-pulse" id="spin-coin-badge">🪙 Lucky Koin: 50</span>
+                    </div>
+                    <h2 class="font-display text-3xl md:text-4xl font-bold tracking-wide">Kotak Keberuntungan Misterius</h2>
+                    <p class="text-white/90 text-xs md:text-sm mt-1">Buka kotak untuk menaikkan Tier Balmung & Aesprika hingga Tier 10! (Syarat: Basic harus sudah dibeli dari shop).</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div class="flex flex-col items-center justify-center bg-black/20 p-6 rounded-3xl backdrop-blur-sm">
+                        <div class="my-4 flex items-center justify-center">
+                            <div id="lucky-box" class="w-36 h-36 bg-gradient-to-tr from-amber-600 to-yellow-400 rounded-3xl shadow-2xl flex items-center justify-center text-7xl cursor-pointer select-none transition transform hover:scale-105 border-4 border-yellow-200">🎁</div>
+                        </div>
+                        <div class="mt-4 w-full">
+                            <div class="flex justify-between items-center text-xs font-bold mb-2 px-1"><span>Biaya Buka:</span><span class="bg-amber-700 text-amber-100 px-2.5 py-1 rounded-lg">🪙 <span id="spin-cost-label">50</span> Lucky Koin</span></div>
+                            <button onclick="executeSpin()" id="spin-btn" class="w-full bg-white hover:bg-amber-50 text-amber-800 font-display font-bold text-sm py-3 rounded-xl shadow-lg transition transform active:scale-95">📦 BUKA LUCKY BOX SEKARANG!</button>
+                        </div>
+                    </div>
+                    <div class="bg-black/30 backdrop-blur-md p-5 rounded-3xl text-left space-y-3">
+                        <h4 class="font-display font-bold text-sm text-yellow-200 pb-2 flex items-center justify-between"><span>🎁 Daftar List Hadiah Kotak</span><span class="text-[10px] bg-amber-700 px-2 py-0.5 rounded text-white">Prize Pool (15% Legend)</span></h4>
+                        <ul class="text-[11px] space-y-2 text-white/90">
+                            <li class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl"><span>⚔️</span><div><b>Balmung Stacking:</b> +1 Tier (Max T10) <span class="text-amber-300 font-bold">(7.5%)</span></div></li>
+                            <li class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl"><span>🛡️</span><div><b>Aesprika Stacking:</b> +1 Tier (Max T10) <span class="text-amber-300 font-bold">(7.5%)</span></div></li>
+                            <li class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl"><span>✨</span><div><b>EXP Gede:</b> Level x 25,000 EXP <span class="text-yellow-300">(15%)</span></div></li>
+                            <li class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl"><span>🪙</span><div><b>Gold Gede:</b> Level x 1,000 Gold <span class="text-yellow-300">(15%)</span></div></li>
+                            <li class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl"><span>✨</span><div><b>Bonus Skill Point:</b> +2 SP <span class="text-yellow-300">(15%)</span></div></li>
+                            <li class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl"><span>🎁</span><div><b>Bonus Lucky Koin:</b> 200 Koin <span class="text-yellow-300">(15%)</span></div></li>
+                            <li class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl"><span>🪙</span><div><b>Gold & EXP Kecil:</b> 0.1 x Level x 5,000 Exp / Gold <span class="text-yellow-300">(25%)</span></div></li>
+                        </ul>
+                    </div>
+                </div>
+                <div id="spin-result-log" class="text-xs font-bold text-amber-950 bg-white/90 p-3 rounded-2xl shadow-inner">Stok Lucky Koin Anda saat ini: <span id="current-spin-coins" class="text-amber-600 font-extrabold">50</span> Koin.</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let playerLevel = parseInt(<?= $player['level']; ?>) || 1, playerExp = parseFloat(<?= $player['exp']; ?>) || 0, maxExp = parseFloat(<?= $player['max_exp']; ?>) || 100;
+        let playerHp = parseInt(<?= $player['hp']; ?>) || 500, maxHp = parseInt(<?= $player['max_hp']; ?>) || 500, playerSp = parseInt(<?= $player['sp']; ?>) || 50, maxSp = parseInt(<?= $player['max_sp']; ?>) || 50;
+        let playerGold = parseInt(<?= $player['gold']; ?>) || 500, weaponTier = parseInt(<?= $player['weapon_tier']; ?>) || 0, armorTier = parseInt(<?= $player['armor_tier']; ?>) || 0;
+        let durability = parseInt(<?= $player['durability']; ?>) || 100, currentHardcoreMultiplier = parseFloat(<?= $player['hardcore_multiplier']; ?>) || 1;
+        let expMultiplier = parseInt(<?= $player['exp_multiplier']; ?>) || 1, critRate = parseInt(<?= $player['crit_rate']; ?>) || 10;
+        let monsterMaxHp = parseInt(<?= $player['monster_max_hp']; ?>) || 50, monsterHp = parseInt(<?= $player['monster_hp']; ?>) || 50;
+        let monsterLevel = parseInt(<?= $player['monster_level']; ?>) || 1, killCount = parseInt(<?= $player['kill_count']; ?>) || 0, isMvpActive = <?= $player['is_mvp'] ? 'true' : 'false'; ?>;
+
+        let spinCoins = parseInt(localStorage.getItem('poring_spin_coins')) || 50;
+        let currentSpinCost = parseInt(localStorage.getItem('poring_spin_cost')) || 50;
+        let totalMvpSpawnCount = parseInt(localStorage.getItem('poring_mvp_count')) || 0;
+        let skillPoints = parseInt(localStorage.getItem('poring_skill_points')) || 0;
+        let blessingLevel = parseInt(localStorage.getItem('poring_blessing_level')) || 0;
+        let divineLevel = parseInt(localStorage.getItem('poring_divine_level')) || 0;
+        let ironLevel = parseInt(localStorage.getItem('poring_iron_level')) || 0;
+        let moneyLevel = parseInt(localStorage.getItem('poring_money_level')) || 0;
+        let wealthLevel = parseInt(localStorage.getItem('poring_wealth_level')) || 0;
+        let durabilityArtifactLevel = parseInt(localStorage.getItem('poring_durability_art_level')) || 0;
+        let spinMultiplier = parseInt(localStorage.getItem('poring_spin_multiplier')) || 1;
+        let balmungTier = parseInt(localStorage.getItem('poring_balmung_tier')) || 0;
+        let aesprikaTier = parseInt(localStorage.getItem('poring_aesprika_tier')) || 0;
+        let currentBiomeName = localStorage.getItem('poring_current_biome_name') || "Poring";
+
+        let balmungUnlocked = localStorage.getItem('poring_balmung_unlocked') === 'true';
+        let aesprikaUnlocked = localStorage.getItem('poring_aesprika_unlocked') === 'true';
+
+        const weaponItems = [
+            { name: "Novice Knife (+5 DMG, +2% Crit)", dmg: 5, crit: 2, price: 100 }, 
+            { name: "Main Gauche (+15 DMG, +5% Crit)", dmg: 15, crit: 5, price: 300 },
+            { name: "Swordbreaker (+35 DMG, +8% Crit)", dmg: 35, crit: 8, price: 800 }, 
+            { name: "Katar of Piercing (+70 DMG, +12% Crit)", dmg: 70, crit: 12, price: 1800 },
+            { name: "Blade of Archangel (+130 DMG, +18% Crit)", dmg: 130, crit: 18, price: 3500 },
+            { name: "Stunner (+220 DMG, +24% Crit)", dmg: 220, crit: 24, price: 7000 },
+            { name: "Executioner (+340 DMG, +32% Crit)", dmg: 340, crit: 32, price: 15000 },
+            { name: "Mysteltainn (+500 DMG, +45% Crit)", dmg: 500, crit: 45, price: 30000 },
+            { name: "Balmung (Unlock Tier 0)", dmg: 1500, crit: 75, price: 100000 }
+        ];
+
+        const armorItems = [
+            { name: "Cloth Armor (+50 HP, +5 DEF)", hp: 50, def: 5, price: 100 }, 
+            { name: "Leather Jacket (+150 HP, +15 DEF)", hp: 150, def: 15, price: 350 },
+            { name: "Chain Mail (+400 HP, +35 DEF)", hp: 400, def: 35, price: 900 }, 
+            { name: "Full Plate Armor (+900 HP, +75 DEF)", hp: 900, def: 75, price: 2000 },
+            { name: "Mink Coat (+1600 HP, +130 DEF)", hp: 1600, def: 130, price: 4500 },
+            { name: "Glittering Jacket (+2800 HP, +210 DEF)", hp: 2800, def: 210, price: 10000 },
+            { name: "Padded Armor (+4500 HP, +320 DEF)", hp: 4500, def: 320, price: 22000 },
+            { name: "Aesprika (Unlock Tier 0)", hp: 25000, def: 1250, price: 100000 }
+        ];
+
+        const expArtifacts = [
+            { val: 2, name: "📜 Artifact EXP x2", price: 500 },
+            { val: 3, name: "📜 Artifact EXP x3", price: 5000 },
+            { val: 4, name: "📜 Artifact EXP x4", price: 25000 },
+            { val: 5, name: "📜 Artifact EXP x5", price: 50000 },
+            { val: 10, name: "📜 Artifact EXP x10 Godly", price: 100000 }
+        ];
+
+        const spinArtifacts = [
+            { val: 2, name: "🎁 Lucky Artifact Koin x2", price: 1500 },
+            { val: 3, name: "🎁 Lucky Artifact Koin x3", price: 10000 },
+            { val: 4, name: "🎁 Lucky Artifact Koin x4", price: 50000 },
+            { val: 5, name: "🎁 Lucky Artifact Koin x5", price: 100000 }
+        ];
+
+        const biomesData = {
+            'poring': { name: "Poring", minLv: 1, multiplier: 1 },
+            'drops': { name: "Drops", minLv: 10, multiplier: 2 },
+            'poporing': { name: "Poporing", minLv: 20, multiplier: 3 },
+            'marin': { name: "Marin", minLv: 30, multiplier: 4 },
+            'aquaring': { name: "Aquaring", minLv: 40, multiplier: 5 },
+            'metaling': { name: "Metaling", minLv: 50, multiplier: 6 },
+            'magmaring': { name: "Magmaring", minLv: 60, multiplier: 7 },
+            'santa': { name: "Santa Poring", minLv: 70, multiplier: 8 },
+            'angeling': { name: "Angeling", minLv: 80, multiplier: 9 },
+            'archangeling': { name: "Archangeling", minLv: 90, multiplier: 10 }
+        };
+
+        function saveGame() {
+            try {
+                localStorage.setItem('poring_spin_coins', spinCoins); 
+                localStorage.setItem('poring_spin_cost', currentSpinCost);
+                localStorage.setItem('poring_mvp_count', totalMvpSpawnCount); 
+                localStorage.setItem('poring_balmung_tier', balmungTier);
+                localStorage.setItem('poring_aesprika_tier', aesprikaTier); 
+                localStorage.setItem('poring_exp_multi', expMultiplier);
+                localStorage.setItem('poring_spin_multiplier', spinMultiplier); 
+                localStorage.setItem('poring_skill_points', skillPoints);
+                localStorage.setItem('poring_blessing_level', blessingLevel); 
+                localStorage.setItem('poring_divine_level', divineLevel);
+                localStorage.setItem('poring_iron_level', ironLevel); 
+                localStorage.setItem('poring_money_level', moneyLevel);
+                localStorage.setItem('poring_wealth_level', wealthLevel);
+                localStorage.setItem('poring_durability_art_level', durabilityArtifactLevel); 
+                localStorage.setItem('poring_current_biome_name', currentBiomeName);
+                localStorage.setItem('poring_balmung_unlocked', balmungUnlocked); 
+                localStorage.setItem('poring_aesprika_unlocked', aesprikaUnlocked);
+
+                let fd = new FormData();
+                fd.append('action', 'save'); fd.append('level', playerLevel); fd.append('exp', playerExp); fd.append('max_exp', maxExp);
+                fd.append('hp', playerHp); fd.append('max_hp', maxHp); fd.append('sp', playerSp); fd.append('max_sp', maxSp);
+                fd.append('gold', playerGold); fd.append('bonus_dmg', 0); fd.append('weapon_tier', weaponTier); fd.append('bonus_hp', 0);
+                fd.append('armor_tier', armorTier); fd.append('refine_level', 0); fd.append('durability', durability);
+                fd.append('hardcore_multiplier', currentHardcoreMultiplier); fd.append('exp_multiplier', expMultiplier); fd.append('crit_rate', critRate);
+                fd.append('monster_max_hp', monsterMaxHp); fd.append('monster_hp', monsterHp); fd.append('monster_level', monsterLevel);
+                fd.append('kill_count', killCount); fd.append('is_mvp', isMvpActive ? 1 : 0);
+
+                fetch('index.php', { method: 'POST', body: fd }).catch(e => {});
+            } catch (e) {}
+        }
+
+        function resetGame() {
+            if (confirm("⚠️ PERINGATAN KERAS!\nApakah Anda yakin ingin mereset seluruh progres & Database?")) {
+                let fd = new FormData(); fd.append('action', 'reset');
+                fetch('index.php', { method: 'POST', body: fd })
+                .then(res => res.json())
+                .then(data => {
+                    localStorage.clear();
+                    location.reload();
+                })
+                .catch(() => {
+                    localStorage.clear();
+                    location.reload();
+                });
+            }
+        }
+
+        function getTierMultiplier(tier) {
+            if (tier <= 0) return 0;
+            if (tier >= 10) return 15.0; 
+            return 1.5 + ((tier - 1) * (13.5 / 9)); 
+        }
+
+        function upgradeBlessing() { if (blessingLevel < 10 && skillPoints > 0) { skillPoints--; blessingLevel++; saveGame(); updateRpgUI(); } }
+        function upgradeDivine() { if (divineLevel < 10 && skillPoints > 0) { skillPoints--; divineLevel++; saveGame(); updateRpgUI(); } }
+        function upgradeIron() { if (ironLevel < 10 && skillPoints >= 2) { skillPoints -= 2; ironLevel++; saveGame(); updateRpgUI(); } }
+        function upgradeMoney() {
+            let maxM = playerLevel >= 65 ? 20 : 10;
+            if (moneyLevel < maxM && skillPoints > 0) { skillPoints--; moneyLevel++; saveGame(); updateRpgUI(); }
+        }
+        function upgradeWealth() {
+            if (wealthLevel < 10 && skillPoints >= 2 && playerGold >= 50000) {
+                skillPoints -= 2;
+                playerGold -= 50000;
+                wealthLevel++;
+                saveGame();
+                updateRpgUI();
+            } else if (wealthLevel < 10) {
+                if (skillPoints < 2) alert("Skill Point tidak cukup (Butuh 2 SP)!");
+                else if (playerGold < 50000) alert("Gold tidak cukup (Butuh 50.000 Gold)!");
+            }
+        }
+
+        function getWealthBonus(lvl) {
+            if (lvl <= 0) return { mob: 0, mvp: 0 };
+            let mobBonuses = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+            let mvpBonuses = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+            return { mob: mobBonuses[lvl] || 0, mvp: mvpBonuses[lvl] || 0 };
+        }
+
+        function getDivineStats(lvl) {
+            let defs = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500];
+            let reds = [0, 0.50, 0.50, 0.50, 0.50, 0.50, 0.75, 0.75, 0.75, 0.75, 0.75];
+            return { def: defs[lvl] || 0, reduction: reds[lvl] || 0 };
+        }
+
+        function getIronStats(lvl) {
+            let rets = [0, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20];
+            return { retention: rets[lvl] || 0 };
+        }
+
+        function getMoneyMultiplier(lvl) {
+            if (lvl <= 10) {
+                let std = [0, 0.20, 0.40, 0.60, 0.80, 1.00, 1.20, 1.40, 1.60, 1.80, 2.00];
+                return std[lvl] || 0;
+            }
+            return 2.00 + ((lvl - 10) * 0.30);
+        }
+
+        function repairDurabilityInstan() {
+            if (playerGold >= 150) {
+                playerGold -= 150; durability = 100 + (durabilityArtifactLevel * 25); saveGame(); updateRpgUI();
+            }
+        }
+
+        function buyExpArtifact(val, price) {
+            if (playerGold >= price) {
+                playerGold -= price;
+                expMultiplier = val;
+                saveGame();
+                updateRpgUI();
+            }
+        }
+
+        function buySpinArtifact(val, price) {
+            if (playerGold >= price) {
+                playerGold -= price;
+                spinMultiplier = val;
+                saveGame();
+                updateRpgUI();
+            }
+        }
+
+        function executeSpin() {
+            if (spinCoins < currentSpinCost) return;
+            spinCoins -= currentSpinCost; currentSpinCost += 50;
+            let box = document.getElementById('lucky-box');
+            box.classList.add('box-shake');
+            document.getElementById('spin-btn').disabled = true;
+            setTimeout(() => {
+                box.classList.remove('box-shake');
+                document.getElementById('spin-btn').disabled = false;
+                let roll = Math.random() * 100, msg = "";
+                if (roll < 7.5) { 
+                    if (balmungTier < 10) balmungTier++; 
+                    msg = `⚔️ BALMUNG Tier ${balmungTier} didapatkan! (Skala ${getTierMultiplier(balmungTier)}x)`; 
+                }
+                else if (roll < 15.0) { 
+                    if (aesprikaTier < 10) aesprikaTier++; 
+                    msg = `🛡️ AESPRIKA Tier ${aesprikaTier} didapatkan! (Skala ${getTierMultiplier(aesprikaTier)}x)`; 
+                }
+                else if (roll < 30.0) { let expR = playerLevel * 25000; addExp(expR); msg = `✨ EXP Gede (+${expR})!`; }
+                else if (roll < 45.0) { let gR = playerLevel * 1000; playerGold += gR; msg = `🪙 Gold Gede (+${gR})!`; }
+                else if (roll < 60.0) { skillPoints += 2; msg = `✨ +2 Skill Point!`; }
+                else if (roll < 75.0) { let sR = 200 * spinMultiplier; spinCoins += sR; msg = `🎁 Bonus Lucky Koin (+${sR})!`; }
+                else { 
+                    let smallVal = Math.floor(0.1 * playerLevel * 5000);
+                    if (Math.random() < 0.5) {
+                        playerGold += smallVal;
+                        msg = `🪙 Gold Kecil (+${smallVal})!`;
+                    } else {
+                        addExp(smallVal);
+                        msg = `✨ EXP Kecil (+${smallVal})!`;
+                    }
+                }
+                document.getElementById('spin-result-log').innerHTML = `<span class="text-amber-900 font-extrabold text-sm">${msg}</span>`;
+                saveGame(); updateRpgUI();
+            }, 2000);
+        }
+
+        function trySelectTheme(key, name, minLv, multVal) {
+            if (playerLevel < minLv) return;
+            currentHardcoreMultiplier = multVal; currentBiomeName = name;
+            document.body.className = document.body.className.replace(/ theme-\S+/g, '') + ' theme-' + key;
+            document.getElementById('active-theme-label').innerText = `✨ Biome: ${name} (x${multVal})`;
+            isMvpActive = false; killCount = 0; monsterLevel = playerLevel;
+            monsterMaxHp = Math.floor(monsterLevel * 150 * currentHardcoreMultiplier); monsterHp = monsterMaxHp;
+            saveGame(); updateMonsterUI(); updateRpgUI();
+        }
+
+        function switchTab(type) {
+            ['weapon', 'armor', 'potion', 'artifact'].forEach(t => {
+                let el = document.getElementById('shop-' + t + '-container');
+                let btn = document.getElementById('tab-' + t);
+                if (el) el.classList.toggle('hidden', t !== type);
+                if (btn) {
+                    if (t === type) {
+                        btn.className = "flex-1 text-white font-bold text-[11px] py-2 rounded-xl transition " + (t === 'weapon' ? 'bg-indigo-600' : t === 'armor' ? 'bg-blue-600' : t === 'potion' ? 'bg-emerald-600' : 'bg-teal-600');
+                    } else {
+                        btn.className = "flex-1 bg-slate-200 text-slate-700 font-bold text-[11px] py-2 rounded-xl transition";
+                    }
+                }
+            });
+        }
+
+        function buyHealthPotion(type) {
+            let cost = playerLevel <= 15 ? 50 : 300;
+            if (playerGold >= cost) { playerGold -= cost; playerHp = maxHp; saveGame(); updateRpgUI(); }
+        }
+
+        function buyItem(type) {
+            if (type === 'sp' && playerGold >= 40) { playerGold -= 40; playerSp = maxSp; saveGame(); updateRpgUI(); }
+        }
+
+        function checkHeroImmortal() { if (playerHp <= 0 || isNaN(playerHp)) playerHp = 1; }
+
+        function buyWeapon() {
+            if (weaponTier >= weaponItems.length) return;
+            let item = weaponItems[weaponTier];
+            if (playerGold >= item.price) {
+                playerGold -= item.price; 
+                weaponTier++;
+                if (weaponTier === weaponItems.length) { 
+                    balmungUnlocked = true;
+                    if (balmungTier === 0) balmungTier = 1;
+                }
+                durability = 100 + (durabilityArtifactLevel * 25); 
+                saveGame(); 
+                updateRpgUI();
+            }
+        }
+
+        function buyArmor() {
+            if (armorTier >= armorItems.length) return;
+            let item = armorItems[armorTier];
+            if (playerGold >= item.price) {
+                playerGold -= item.price; 
+                armorTier++;
+                if (armorTier === armorItems.length) { 
+                    aesprikaUnlocked = true;
+                    if (aesprikaTier === 0) aesprikaTier = 1;
+                }
+                durability = 100 + (durabilityArtifactLevel * 25); 
+                saveGame(); 
+                updateRpgUI();
+            }
+        }
+
+        function addExp(amount) {
+            playerExp += amount * Math.max(1, Math.floor(playerLevel * 4.0)) * currentHardcoreMultiplier * expMultiplier;
+            let lvG = 0, safety = 0;
+            while (playerExp >= maxExp && safety++ < 100) {
+                playerExp -= maxExp; playerLevel++; lvG++; skillPoints++;
+                maxHp += 300 + (playerLevel * 50); maxSp += 25; playerHp = maxHp; playerSp = maxSp;
+                maxExp = Math.floor(maxExp * 1.25); spinCoins += (25 * spinMultiplier);
+                monsterLevel = playerLevel; monsterMaxHp = Math.floor(monsterLevel * 180 * currentHardcoreMultiplier * (isMvpActive ? 5.0 : 1.0)); monsterHp = monsterMaxHp;
+            }
+            if (lvG > 0) alert("🎉 LEVEL UP! Level " + playerLevel + "!");
+            saveGame(); updateRpgUI(); updateMonsterUI();
+        }
+
+        function updateRpgUI() {
+            checkHeroImmortal();
+            monsterLevel = playerLevel;
+
+            document.getElementById('char-level-badge').innerText = "Lv. " + playerLevel + " Hero";
+            document.getElementById('char-tier-info').innerText = (localStorage.getItem('poring_current_biome_name') || "Poring") + " Slayer";
+            document.getElementById('hp-bar').style.width = Math.min(100, (playerHp / maxHp) * 100) + '%';
+            document.getElementById('hp-text').innerText = playerHp + '/' + maxHp;
+            document.getElementById('sp-bar').style.width = Math.min(100, (playerSp / maxSp) * 100) + '%';
+            document.getElementById('sp-text').innerText = playerSp + '/' + maxSp;
+            document.getElementById('exp-bar').style.width = Math.min(100, (playerExp / maxExp) * 100) + '%';
+            document.getElementById('exp-text').innerText = playerExp + '/' + maxExp;
+            document.getElementById('shop-gold-badge').innerText = `🪙 ${playerGold} Gold`;
+            document.getElementById('spin-coin-badge').innerText = `🪙 Lucky Koin: ${spinCoins}`;
+            document.getElementById('spin-cost-label').innerText = currentSpinCost;
+            document.getElementById('current-spin-coins').innerText = spinCoins;
+            document.getElementById('skill-point-badge').innerText = `✨ SP: ${skillPoints}`;
+            document.getElementById('available-sp-label').innerText = `Skill Points Tersedia: ${skillPoints}`;
+            document.getElementById('blessing-level').innerText = blessingLevel;
+            document.getElementById('divine-level').innerText = divineLevel;
+            document.getElementById('iron-level').innerText = ironLevel;
+            document.getElementById('money-level').innerText = moneyLevel;
+            document.getElementById('wealth-level').innerText = wealthLevel;
+
+            const skillsConfig = [
+                { id: 'wrapper-blessing', btnId: 'upgrade-blessing-btn', level: blessingLevel, max: 10 },
+                { id: 'wrapper-divine', btnId: 'upgrade-divine-btn', level: divineLevel, max: 10 },
+                { id: 'wrapper-iron', btnId: 'upgrade-iron-btn', level: ironLevel, max: 10 },
+                { id: 'wrapper-money', btnId: 'upgrade-money-btn', level: moneyLevel, max: (playerLevel >= 65 ? 20 : 10) },
+                { id: 'wrapper-wealth', btnId: 'upgrade-wealth-btn', level: wealthLevel, max: 10 }
+            ];
+
+            skillsConfig.forEach(s => {
+                let wrap = document.getElementById(s.id);
+                let btn = document.getElementById(s.btnId);
+                if (s.level >= s.max) {
+                    if (wrap) wrap.className = wrap.className.replace(/bg-\w+-\d+\/\d+/g, 'bg-white text-slate-500 shadow-none');
+                    if (btn) {
+                        btn.innerText = "MAX";
+                        btn.disabled = true;
+                        btn.className = "bg-white text-slate-400 font-bold text-xs px-5 py-2.5 rounded-xl shadow-none stop-cursor";
+                    }
+                } else {
+                    if (btn) {
+                        btn.disabled = false;
+                        if (s.id === 'wrapper-iron') btn.innerText = "+ UP (2 SP)";
+                        else if (s.id === 'wrapper-wealth') btn.innerText = "+ UP (2 SP & 50k Gold)";
+                        else btn.innerText = "+ UP (1 SP)";
+
+                        if (s.id === 'wrapper-blessing') btn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap";
+                        else if (s.id === 'wrapper-divine') btn.className = "bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap";
+                        else if (s.id === 'wrapper-iron') btn.className = "bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap";
+                        else if (s.id === 'wrapper-money') btn.className = "bg-yellow-600 hover:bg-yellow-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap";
+                        else if (s.id === 'wrapper-wealth') btn.className = "bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition whitespace-nowrap";
+                    }
+                }
+            });
+
+            let maxM = playerLevel >= 65 ? 20 : 10;
+            document.getElementById('money-max-level').innerText = maxM;
+            document.getElementById('breakthrough-status').innerText = playerLevel >= 65 ? "⭐ Breakthrough Lv. 20 Terbuka!" : "(Capai Lv. 65)";
+
+            let divS = getDivineStats(divineLevel), ironS = getIronStats(ironLevel), moneyM = getMoneyMultiplier(moneyLevel), wealthB = getWealthBonus(wealthLevel);
+            document.getElementById('divine-effect-desc').innerText = divineLevel === 0 ? "Belum aktif" : `+${divS.def} DEF, Reduksi ${divS.reduction * 100}%`;
+            document.getElementById('iron-effect-desc').innerText = ironLevel === 0 ? "Belum aktif" : `Retensi ${ironS.retention * 100}%, Absolut`;
+            document.getElementById('money-effect-desc').innerText = `+${moneyM * 100}% Gold`;
+            document.getElementById('wealth-monster-bonus').innerText = `+${wealthB.mob} Lucky Coin`;
+            document.getElementById('wealth-mvp-bonus').innerText = `+${wealthB.mvp} Lucky Coin`;
+            document.getElementById('ui-stat-artifact').innerText = expMultiplier > 1 ? `x${expMultiplier} Aktif` : `x1 (Std)`;
+            document.getElementById('ui-stat-spin-art').innerText = spinMultiplier > 1 ? `x${spinMultiplier} Aktif` : `x1 (Std)`;
+
+            let wC = weaponTier > 0 && weaponTier <= weaponItems.length ? weaponItems[weaponTier - 1] : { dmg: 0, crit: 0 };
+            let aC = armorTier > 0 && armorTier <= armorItems.length ? armorItems[armorTier - 1] : { hp: 0, def: 0 };
+
+            let actBM = (weaponTier >= weaponItems.length && balmungUnlocked) ? (balmungTier > 0 ? getTierMultiplier(balmungTier) : 0) : 0;
+            let actAM = (armorTier >= armorItems.length && aesprikaUnlocked) ? (aesprikaTier > 0 ? getTierMultiplier(aesprikaTier) : 0) : 0;
+
+            let fWD = (wC.dmg || 0) + (actBM > 0 ? Math.floor(1500 * actBM) : 0) + (blessingLevel * 50);
+            let fAH = (aC.hp || 0) + (actAM > 0 ? Math.floor(25000 * actAM) : 0);
+            let fAD = (aC.def || 0) + (actAM > 0 ? Math.floor(1250 * actAM) : 0) + divS.def;
+
+            document.getElementById('ui-stat-dmg').innerText = Math.floor((playerLevel * 5) + fWD) + " DMG";
+            document.getElementById('ui-stat-def').innerText = fAD + " DEF";
+            document.getElementById('ui-stat-reduction').innerText = (divS.reduction * 100) + "%";
+            document.getElementById('ui-stat-crit').innerText = Math.min(100, (wC.crit || 0) + blessingLevel) + "%";
+            document.getElementById('ui-stat-critdef').innerText = (actAM > 0 ? Math.floor(100 * (actAM / 15)) : 0) + "%";
+            document.getElementById('ui-stat-critres').innerText = (actAM > 0 ? Math.floor(75 * (actAM / 15)) : 0) + "%";
+            
+            durability = Math.max(0, Math.min(100 + (durabilityArtifactLevel * 25), durability));
+            document.getElementById('ui-stat-durability').innerText = durability + "%";
+            maxHp = 500 + (playerLevel * 150) + fAH; playerHp = Math.min(maxHp, playerHp);
+            document.getElementById('regen-status').innerText = `Regen: +${5 * playerLevel} HP/SP (Immortal Active)`;
+
+            document.getElementById('potion-shop-slot').innerHTML = `<div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-2xl"><div class="text-left"><h4 class="font-bold text-xs">🧪 Health Potion</h4><span class="text-[10px] text-slate-500">Harga: 🪙 ${playerLevel <= 15 ? 50 : 300} Gold</span></div><button onclick="buyHealthPotion('full')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition">Beli</button></div>`;
+            
+            let wBtn = document.getElementById('buy-weapon-btn');
+            if (weaponTier < weaponItems.length) {
+                let nW = weaponItems[weaponTier];
+                document.getElementById('shop-weapon-name').innerText = nW.name;
+                document.getElementById('shop-weapon-price').innerText = "Harga: 🪙 " + nW.price + " Gold";
+                document.getElementById('weapon-shop-log').innerText = `Status Senjata: Tersedia ${nW.name}`;
+                wBtn.disabled = false;
+                wBtn.innerText = "Beli";
+                wBtn.className = "bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition";
+            } else {
+                document.getElementById('shop-weapon-name').innerText = `⚔️ Balmung (Tier ${balmungTier} - Skala ${getTierMultiplier(balmungTier)}x)`;
+                document.getElementById('shop-weapon-price').innerText = "MAX / UNLOCKED";
+                document.getElementById('weapon-shop-log').innerHTML = `Status Senjata: Balmung Sempurna Aktif!<br><span class="text-indigo-700 font-bold">Balmung [Owned] : Tier ${balmungTier} / Tier 10</span>`;
+                wBtn.disabled = true;
+                wBtn.innerText = "Milik";
+                wBtn.className = "bg-white text-slate-400 font-bold text-xs px-4 py-2 rounded-xl shadow-none stop-cursor";
+            }
+
+            let aBtn = document.getElementById('buy-armor-btn');
+            if (armorTier < armorItems.length) {
+                let nA = armorItems[armorTier];
+                document.getElementById('shop-armor-name').innerText = nA.name;
+                document.getElementById('shop-armor-price').innerText = "Harga: 🪙 " + nA.price + " Gold";
+                document.getElementById('armor-shop-log').innerText = armorTier === 0 ? "Status Armor: Tanpa Pelindung" : `Status Armor: Tersedia ${nA.name}`;
+                aBtn.disabled = false;
+                aBtn.innerText = "Beli";
+                aBtn.className = "bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition";
+            } else {
+                document.getElementById('shop-armor-name').innerText = `🛡️ Aesprika (Tier ${aesprikaTier} - Skala ${getTierMultiplier(aesprikaTier)}x)`;
+                document.getElementById('shop-armor-price').innerText = "MAX / UNLOCKED";
+                document.getElementById('armor-shop-log').innerHTML = `Status Armor: Aesprika Sempurna Aktif!<br><span class="text-blue-700 font-bold">Aesprika [Owned] : Tier ${aesprikaTier} / Tier 10</span>`;
+                aBtn.disabled = true;
+                aBtn.innerText = "Milik";
+                aBtn.className = "bg-white text-slate-400 font-bold text-xs px-4 py-2 rounded-xl shadow-none stop-cursor";
+            }
+
+            let currentExpArt = null;
+            for (let art of expArtifacts) {
+                if (art.val > expMultiplier) {
+                    currentExpArt = art;
+                    break;
+                }
+            }
+            let expHtml = '';
+            if (currentExpArt) {
+                expHtml = `<div class="flex items-center justify-between bg-amber-50 p-2.5 rounded-2xl">
+                    <div class="text-left"><h4 class="font-bold text-xs text-amber-900">${currentExpArt.name}</h4><span class="text-[10px] text-amber-700">Harga: 🪙 ${currentExpArt.price} Gold</span></div>
+                    <button onclick="buyExpArtifact(${currentExpArt.val}, ${currentExpArt.price})" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition">Beli</button>
+                </div>`;
+            } else {
+                expHtml = `<div class="p-2.5 text-center text-xs font-bold text-amber-800 bg-amber-50 rounded-2xl">✨ Seluruh Artifact EXP Maksimal (x10) Telah Dimiliki!</div>`;
+            }
+            document.getElementById('artifact-exp-slot').innerHTML = expHtml;
+
+            let currentSpinArt = null;
+            for (let art of spinArtifacts) {
+                if (art.val > spinMultiplier) {
+                    currentSpinArt = art;
+                    break;
+                }
+            }
+            let spinHtml = '';
+            if (currentSpinArt) {
+                spinHtml = `<div class="flex items-center justify-between bg-yellow-50 p-2.5 rounded-2xl">
+                    <div class="text-left"><h4 class="font-bold text-xs text-yellow-900">${currentSpinArt.name}</h4><span class="text-[10px] text-yellow-700">Harga: 🪙 ${currentSpinArt.price} Gold</span></div>
+                    <button onclick="buySpinArtifact(${currentSpinArt.val}, ${currentSpinArt.price})" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition">Beli</button>
+                </div>`;
+            } else {
+                spinHtml = `<div class="p-2.5 text-center text-xs font-bold text-yellow-800 bg-yellow-50 rounded-2xl">🎁 Seluruh Lucky Artifact Koin Maksimal (x5) Telah Dimiliki!</div>`;
+            }
+            document.getElementById('artifact-spin-slot').innerHTML = spinHtml;
+
+            document.getElementById('artifact-shop-log').innerText = `Status Artifact: EXP (x${expMultiplier}) & Lucky Koin (x${spinMultiplier}) Aktif`;
+
+            for(let key in biomesData) { 
+                let av = document.getElementById('avatar-' + key); 
+                if (av) av.classList.toggle('locked', playerLevel < biomesData[key].minLv); 
+            }
+        }
+
+        setInterval(() => {
+            if (playerHp < maxHp) playerHp = Math.min(maxHp, playerHp + (playerLevel * 5));
+            if (playerHp <= 0 || isNaN(playerHp)) playerHp = 1;
+            if (playerSp < maxSp) playerSp = Math.min(maxSp, playerSp + (playerLevel * 2));
+            saveGame(); updateRpgUI();
+        }, 3000);
+
+        function attackMonster() {
+            checkHeroImmortal();
+            monsterLevel = playerLevel;
+            let wC = weaponTier > 0 && weaponTier <= weaponItems.length ? weaponItems[weaponTier - 1] : { dmg: 0, crit: 0 };
+            
+            let actBM = (weaponTier >= weaponItems.length && balmungUnlocked) ? (balmungTier > 0 ? getTierMultiplier(balmungTier) : 0) : 0;
+
+            let bD = Math.floor((playerLevel * 5) + (wC.dmg || 0) + (actBM > 0 ? Math.floor(1500 * actBM) : 0) + (blessingLevel * 50));
+            let fD = bD, log = "";
+
+            if (Math.random() < 0.30 && playerSp >= 15) {
+                playerSp -= 15; fD = Math.floor(bD * 2.5); monsterHp -= fD; log = `<span class="text-orange-600 font-bold">🔥 BRUTAL FIRE BOLT! -${fD} DMG!</span>`;
+            } else if (Math.random() * 100 < ((wC.crit || 0) + (actBM > 0 ? Math.floor(75 * (actBM / 15)) : 0) + blessingLevel)) {
+                fD = Math.floor(bD * 1.5); monsterHp -= fD; log = `<span class="text-amber-600 font-bold">🎯 CRITICAL! -${fD} DMG!</span>`;
+            } else {
+                monsterHp -= fD; log = `💥 Menyerang monster sebesar ${fD} DMG.`;
+            }
+
+            if (Math.random() < 0.65 && monsterHp > 0) {
+                let divS = getDivineStats(divineLevel), ironS = getIronStats(ironLevel);
+                let aC = armorTier > 0 && armorTier <= armorItems.length ? armorItems[armorTier - 1] : { def: 0 };
+                
+                let actAM = (armorTier >= armorItems.length && aesprikaUnlocked) ? (aesprikaTier > 0 ? getTierMultiplier(aesprikaTier) : 0) : 0;
+
+                let effD = (aC.def || 0) + (actAM > 0 ? Math.floor(1250 * actAM) : 0) + divS.def;
+                if (durability === 0) effD = Math.floor(effD * (0.5 + ironS.retention));
+
+                let mD = Math.max(15, Math.floor(((monsterLevel * 25) + (currentHardcoreMultiplier * 35) + 120) - (divS.reduction > 0 ? ((monsterLevel * 25) + 120) * divS.reduction : 0) - (effD * 0.15)));
+                playerHp -= mD;
+                log += playerHp <= 0 ? ` <span class="text-purple-600 font-bold">🛡️ IMMORTAL!</span>` : ` <span class="text-rose-600 font-bold">⚠️ COUNTER! -${mD} DMG!</span>`;
+                if (durability > 0 && Math.random() < Math.max(0.08, 0.35 - (ironS.retention * 0.5))) durability = Math.max(0, durability - 1);
+            }
+
+            if (monsterHp <= 0) {
+                let baseExp = isMvpActive ? (monsterLevel * 4500) : (monsterLevel * 850);
+                let gGain = Math.floor((Math.floor(monsterLevel * 35) + 50) * (1 + getMoneyMultiplier(moneyLevel)));
+                let wealthB = getWealthBonus(wealthLevel);
+                if (isMvpActive) {
+                    totalMvpSpawnCount++; let mvpG = Math.floor(((500 * totalMvpSpawnCount) + (monsterLevel * 100)) * (1 + getMoneyMultiplier(moneyLevel)));
+                    playerGold += mvpG; 
+                    let mvpCoins = 20 * spinMultiplier + wealthB.mvp;
+                    spinCoins += mvpCoins;
+                    log = `<span class="text-purple-700 font-extrabold">👑 MVP KE-${totalMvpSpawnCount} DIKALAHKAN! (+🪙 ${mvpG} Gold, +${mvpCoins} Lucky Coin)</span>`;
+                    isMvpActive = false; 
+                } else {
+                    playerGold += gGain; killCount++; 
+                    let mobCoins = 5 * spinMultiplier + wealthB.mob;
+                    spinCoins += mobCoins;
+                    log = `<span class="text-emerald-600 font-bold">🎯 Monster tewas! (+🪙 ${gGain} Gold, +${mobCoins} Lucky Coin)</span>`;
+                    if (killCount >= 8) { isMvpActive = true; killCount = 0; alert("👑 MVP BOSS MUNCUL!"); }
+                }
+                monsterLevel = playerLevel;
+                monsterMaxHp = Math.floor(monsterLevel * 180 * currentHardcoreMultiplier * (isMvpActive ? 5.0 : 1.0)); monsterHp = monsterMaxHp;
+                addExp(baseExp);
+            }
+
+            document.getElementById('clicker-log').innerHTML = log;
+            updateMonsterUI(); saveGame(); updateRpgUI();
+        }
+
+        function updateMonsterUI() {
+            monsterLevel = playerLevel;
+            let pct = Math.max(0, (monsterHp / monsterMaxHp) * 100);
+            document.getElementById('monster-hp-bar').style.width = pct + '%';
+            document.getElementById('monster-level-label').innerText = `Wild Poring (Lv. ${monsterLevel})`;
+            document.getElementById('monster-hp-text').innerText = `HP: ${monsterHp} / ${monsterMaxHp} (Lv. ${monsterLevel})`;
+        }
+
+        updateMonsterUI(); 
+        updateRpgUI();
+    </script>
+</body>
+</html>

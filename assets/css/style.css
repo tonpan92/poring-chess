@@ -1,0 +1,61 @@
+/* ==========================================
+   PORING HUB - ENANCED STYLING (style.css)
+   ========================================== */
+
+/* Efek background gradasi bergerak yang hidup */
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.animated-bg {
+    background: linear-gradient(-45deg, #fff5f7, #f3e8ff, #e0f2fe, #fce7f3);
+    background-size: 400% 400%;
+    animation: gradientShift 12s ease infinite;
+}
+
+/* Kartu dengan efek pop & shadow pastel glow yang mencolok */
+.poring-card {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 2px solid rgba(255, 158, 187, 0.3);
+}
+
+.poring-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    border-color: #ff6b8b;
+    box-shadow: 0 20px 30px -10px rgba(255, 107, 139, 0.25);
+}
+
+/* Styling kustom untuk avatar Poring di atas */
+.poring-avatar {
+    width: 75px;
+    height: 75px;
+    overflow: hidden;
+    border-radius: 9999px;
+    border: 3px solid #ff9ebb;
+    box-shadow: 0 6px 15px rgba(255, 107, 139, 0.3);
+    transition: all 0.3s ease;
+    background-color: #fff;
+}
+
+.poring-avatar:hover {
+    transform: scale(1.15) rotate(5deg);
+    box-shadow: 0 10px 20px rgba(255, 107, 139, 0.5);
+    border-color: #ff6b8b;
+}
+
+/* Kustomisasi Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-track {
+    background: #fff5f7;
+}
+::-webkit-scrollbar-thumb {
+    background: #ff9ebb;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #ff6b8b;
+}
