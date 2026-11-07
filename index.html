@@ -1,52 +1,3 @@
-<?php
-// index.php - Poring Land Hardcore Brutal Edition
-require_once 'koneksi.php';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    header('Content-Type: application/json');
-    if ($_POST['action'] === 'save') {
-        try {
-            $sql = "UPDATE player_save SET level = ?, exp = ?, max_exp = ?, hp = ?, max_hp = ?, sp = ?, max_sp = ?, gold = ?, bonus_dmg = ?, weapon_tier = ?, bonus_hp = ?, armor_tier = ?, refine_level = ?, durability = ?, hardcore_multiplier = ?, exp_multiplier = ?, crit_rate = ?, monster_max_hp = ?, monster_hp = ?, monster_level = ?, kill_count = ?, is_mvp = ? WHERE id = 1";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                $_POST['level'], $_POST['exp'], $_POST['max_exp'], $_POST['hp'], $_POST['max_hp'], 
-                $_POST['sp'], $_POST['max_sp'], $_POST['gold'], $_POST['bonus_dmg'], $_POST['weapon_tier'], 
-                $_POST['bonus_hp'], $_POST['armor_tier'], $_POST['refine_level'], $_POST['durability'], 
-                $_POST['hardcore_multiplier'], $_POST['exp_multiplier'], $_POST['crit_rate'], 
-                $_POST['monster_max_hp'], $_POST['monster_hp'], $_POST['monster_level'], 
-                $_POST['kill_count'], $_POST['is_mvp']
-            ]);
-            echo json_encode(['status' => 'success']);
-        } catch (Exception $e) {
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-        }
-    } elseif ($_POST['action'] === 'reset') {
-        try {
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM player_save WHERE id = 1");
-            $stmt->execute();
-            if ($stmt->fetchColumn() == 0) {
-                $pdo->exec("INSERT INTO player_save (id, level, exp, max_exp, hp, max_hp, sp, max_sp, gold, weapon_tier, armor_tier, durability, hardcore_multiplier, exp_multiplier, crit_rate, monster_max_hp, monster_hp, monster_level, kill_count, is_mvp) VALUES (1, 1, 0, 100, 500, 500, 50, 50, 500, 0, 0, 100, 1, 1, 10, 50, 50, 1, 0, 0)");
-            } else {
-                $pdo->exec("UPDATE player_save SET level=1, exp=0, max_exp=100, hp=500, max_hp=500, sp=50, max_sp=50, gold=500, bonus_dmg=0, weapon_tier=0, bonus_hp=0, armor_tier=0, refine_level=0, durability=100, hardcore_multiplier=1, exp_multiplier=1, crit_rate=10, monster_max_hp=50, monster_hp=50, monster_level=1, kill_count=0, is_mvp=0 WHERE id=1");
-            }
-            echo json_encode(['status' => 'success']);
-        } catch (Exception $e) {
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-        }
-    }
-    exit;
-}
-
-$stmt = $pdo->prepare("SELECT * FROM player_save WHERE id = 1");
-$stmt->execute();
-$player = $stmt->fetch();
-
-if (!$player) {
-    $pdo->exec("INSERT INTO player_save (id, level, exp, max_exp, hp, max_hp, sp, max_sp, gold, weapon_tier, armor_tier, durability, hardcore_multiplier, exp_multiplier, crit_rate, monster_max_hp, monster_hp, monster_level, kill_count, is_mvp) VALUES (1, 1, 0, 100, 500, 500, 50, 50, 500, 0, 0, 100, 1, 1, 10, 50, 50, 1, 0, 0)");
-    $stmt->execute();
-    $player = $stmt->fetch();
-}
-?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -103,30 +54,50 @@ if (!$player) {
         <div class="max-w-7xl mx-auto px-4 flex items-center justify-between overflow-x-auto">
             <div class="flex items-center space-x-3 md:space-x-4">
                 <span class="text-xs font-display font-bold uppercase tracking-wider hidden lg:inline-block mr-2 opacity-85">✨ Biome (Multiply x1-5):</span>
-                <?php 
-                $porings = [
-                    ["key" => "poring", "name" => "Poring", "file" => "poring.gif", "min_lv" => 1, "hardcore" => 1],
-                    ["key" => "drops", "name" => "Drops", "file" => "drops.gif", "min_lv" => 10, "hardcore" => 2],
-                    ["key" => "poporing", "name" => "Poporing", "file" => "poporing.gif", "min_lv" => 20, "hardcore" => 3],
-                    ["key" => "marin", "name" => "Marin", "file" => "marin.gif", "min_lv" => 30, "hardcore" => 4],
-                    ["key" => "aquaring", "name" => "Aquaring", "file" => "aquaring.gif", "min_lv" => 40, "hardcore" => 5],
-                    ["key" => "metaling", "name" => "Metaling", "file" => "metaling.gif", "min_lv" => 50, "hardcore" => 1],
-                    ["key" => "magmaring", "name" => "Magmaring", "file" => "magmaring.gif", "min_lv" => 60, "hardcore" => 2],
-                    ["key" => "santa", "name" => "Santa Poring", "file" => "santa-poring.gif", "min_lv" => 70, "hardcore" => 3],
-                    ["key" => "angeling", "name" => "Angeling", "file" => "angeling.gif", "min_lv" => 80, "hardcore" => 4],
-                    ["key" => "archangeling", "name" => "Archangeling", "file" => "archangeling.gif", "min_lv" => 90, "hardcore" => 5],
-                ];
-                foreach ($porings as $index => $p):
-                    $multiplyIndex = ($index % 5) + 1;
-                ?>
+                
                 <div class="flex flex-col items-center shrink-0 relative group">
-                    <div class="poring-avatar <?= $p['min_lv'] > 1 ? 'locked' : ''; ?>" id="avatar-<?= $p['key']; ?>" style="background-image: url('assets/images/<?= $p['file']; ?>');" onclick="trySelectTheme('<?= $p['key']; ?>', '<?= $p['name']; ?>', <?= $p['min_lv']; ?>, <?= $multiplyIndex; ?>)" title="<?= $p['name']; ?> (x<?= $multiplyIndex; ?>)"></div>
-                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x<?= $multiplyIndex; ?></span>
+                    <div class="poring-avatar" id="avatar-poring" style="background-image: url('assets/images/poring.gif');" onclick="trySelectTheme('poring', 'Poring', 1, 1)" title="Poring (x1)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x1</span>
                 </div>
-                <?php endforeach; ?>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar locked" id="avatar-drops" style="background-image: url('assets/images/drops.gif');" onclick="trySelectTheme('drops', 'Drops', 10, 2)" title="Drops (x2)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x2</span>
+                </div>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar locked" id="avatar-poporing" style="background-image: url('assets/images/poporing.gif');" onclick="trySelectTheme('poporing', 'Poporing', 20, 3)" title="Poporing (x3)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x3</span>
+                </div>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar locked" id="avatar-marin" style="background-image: url('assets/images/marin.gif');" onclick="trySelectTheme('marin', 'Marin', 30, 4)" title="Marin (x4)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x4</span>
+                </div>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar locked" id="avatar-aquaring" style="background-image: url('assets/images/aquaring.gif');" onclick="trySelectTheme('aquaring', 'Aquaring', 40, 5)" title="Aquaring (x5)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x5</span>
+                </div>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar locked" id="avatar-metaling" style="background-image: url('assets/images/metaling.gif');" onclick="trySelectTheme('metaling', 'Metaling', 50, 1)" title="Metaling (x1)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x1</span>
+                </div>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar locked" id="avatar-magmaring" style="background-image: url('assets/images/magmaring.gif');" onclick="trySelectTheme('magmaring', 'Magmaring', 60, 2)" title="Magmaring (x2)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x2</span>
+                </div>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar locked" id="avatar-santa" style="background-image: url('assets/images/santa-poring.gif');" onclick="trySelectTheme('santa', 'Santa Poring', 70, 3)" title="Santa Poring (x3)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x3</span>
+                </div>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar locked" id="avatar-angeling" style="background-image: url('assets/images/angeling.gif');" onclick="trySelectTheme('angeling', 'Angeling', 80, 4)" title="Angeling (x4)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x4</span>
+                </div>
+                <div class="flex flex-col items-center shrink-0 relative group">
+                    <div class="poring-avatar locked" id="avatar-archangeling" style="background-image: url('assets/images/archangeling.gif');" onclick="trySelectTheme('archangeling', 'Archangeling', 90, 5)" title="Archangeling (x5)"></div>
+                    <span class="absolute -bottom-4 text-[9px] font-bold bg-black/60 text-white px-1.5 rounded-full">x5</span>
+                </div>
             </div>
             <div>
-                <a href="http://localhost/kasir_offline/home.php" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition whitespace-nowrap inline-flex items-center gap-1">🚪 Exit Games</a>
+                <a href="#" onclick="alert('Mode Online (GitHub Pages)'); return false;" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition whitespace-nowrap inline-flex items-center gap-1">🚪 Exit Games</a>
             </div>
         </div>
     </div>
@@ -152,7 +123,7 @@ if (!$player) {
             <div class="relative z-10 max-w-2xl">
                 <span class="bg-black/35 backdrop-blur-md text-xs font-semibold px-4 py-1 rounded-full uppercase tracking-widest inline-block mb-2">Skill & Immortality Dashboard</span>
                 <h1 id="hero-title" class="font-display text-3xl md:text-5xl font-bold mb-4 leading-tight">Poring Land Latest Edition! ⚔️</h1>
-                <p id="hero-title-desc" class="text-white/90 text-xs md:text-sm mt-1">Sistem game sepenuhnya sinkron dengan DB dan fitur terbaru Anda.</p>
+                <p id="hero-title-desc" class="text-white/90 text-xs md:text-sm mt-1">Sistem game sepenuhnya online berbasis LocalStorage tanpa database lokal.</p>
             </div>
         </div>
 
@@ -161,7 +132,7 @@ if (!$player) {
                 <h3 class="font-display text-base font-bold text-slate-800 flex items-center gap-2">🛡️ Panel Status & Statistik Hero</h3>
                 <div class="flex items-center gap-3">
                     <span class="text-xs bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-full" id="char-tier-info">Poring Slayer</span>
-                    <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition whitespace-nowrap">🔄 Reset DB (0)</button>
+                    <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition whitespace-nowrap">🔄 Reset Data</button>
                 </div>
             </div>
 
@@ -317,10 +288,10 @@ if (!$player) {
                             <button onclick="repairDurabilityInstan()" class="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition">Repair</button>
                         </div>
 
-                        <!-- Slot Artifact EXP (Maju bertahap) -->
+                        <!-- Slot Artifact EXP -->
                         <div id="artifact-exp-slot"></div>
 
-                        <!-- Slot Artifact Lucky (Maju bertahap) -->
+                        <!-- Slot Artifact Lucky -->
                         <div id="artifact-spin-slot"></div>
 
                         <div id="artifact-shop-log" class="text-xs font-bold text-teal-600 bg-teal-50 p-2.5 rounded-2xl">Status Artifact: Aktif</div>
@@ -338,7 +309,7 @@ if (!$player) {
                         <span class="bg-amber-800 text-amber-100 font-bold text-xs px-3 py-1 rounded-full shadow animate-pulse" id="spin-coin-badge">🪙 Lucky Koin: 50</span>
                     </div>
                     <h2 class="font-display text-3xl md:text-4xl font-bold tracking-wide">Kotak Keberuntungan Misterius</h2>
-                    <p class="text-white/90 text-xs md:text-sm mt-1">Buka kotak untuk menaikkan Tier Balmung & Aesprika hingga Tier 10! (Syarat: Basic harus sudah dibeli dari shop).</p>
+                    <p class="text-white/90 text-xs md:text-sm mt-1">Buka kotak untuk menaikkan Tier Balmung & Aesprika hingga Tier 10!</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                     <div class="flex flex-col items-center justify-center bg-black/20 p-6 rounded-3xl backdrop-blur-sm">
@@ -351,7 +322,7 @@ if (!$player) {
                         </div>
                     </div>
                     <div class="bg-black/30 backdrop-blur-md p-5 rounded-3xl text-left space-y-3">
-                        <h4 class="font-display font-bold text-sm text-yellow-200 pb-2 flex items-center justify-between"><span>🎁 Daftar List Hadiah Kotak</span><span class="text-[10px] bg-amber-700 px-2 py-0.5 rounded text-white">Prize Pool (15% Legend)</span></h4>
+                        <h4 class="font-display font-bold text-sm text-yellow-200 pb-2 flex items-center justify-between"><span>🎁 Daftar Hadiah Kotak</span><span class="text-[10px] bg-amber-700 px-2 py-0.5 rounded text-white">Prize Pool</span></h4>
                         <ul class="text-[11px] space-y-2 text-white/90">
                             <li class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl"><span>⚔️</span><div><b>Balmung Stacking:</b> +1 Tier (Max T10) <span class="text-amber-300 font-bold">(7.5%)</span></div></li>
                             <li class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl"><span>🛡️</span><div><b>Aesprika Stacking:</b> +1 Tier (Max T10) <span class="text-amber-300 font-bold">(7.5%)</span></div></li>
@@ -369,13 +340,25 @@ if (!$player) {
     </main>
 
     <script>
-        let playerLevel = parseInt(<?= $player['level']; ?>) || 1, playerExp = parseFloat(<?= $player['exp']; ?>) || 0, maxExp = parseFloat(<?= $player['max_exp']; ?>) || 100;
-        let playerHp = parseInt(<?= $player['hp']; ?>) || 500, maxHp = parseInt(<?= $player['max_hp']; ?>) || 500, playerSp = parseInt(<?= $player['sp']; ?>) || 50, maxSp = parseInt(<?= $player['max_sp']; ?>) || 50;
-        let playerGold = parseInt(<?= $player['gold']; ?>) || 500, weaponTier = parseInt(<?= $player['weapon_tier']; ?>) || 0, armorTier = parseInt(<?= $player['armor_tier']; ?>) || 0;
-        let durability = parseInt(<?= $player['durability']; ?>) || 100, currentHardcoreMultiplier = parseFloat(<?= $player['hardcore_multiplier']; ?>) || 1;
-        let expMultiplier = parseInt(<?= $player['exp_multiplier']; ?>) || 1, critRate = parseInt(<?= $player['crit_rate']; ?>) || 10;
-        let monsterMaxHp = parseInt(<?= $player['monster_max_hp']; ?>) || 50, monsterHp = parseInt(<?= $player['monster_hp']; ?>) || 50;
-        let monsterLevel = parseInt(<?= $player['monster_level']; ?>) || 1, killCount = parseInt(<?= $player['kill_count']; ?>) || 0, isMvpActive = <?= $player['is_mvp'] ? 'true' : 'false'; ?>;
+        let playerLevel = parseInt(localStorage.getItem('poring_player_level')) || 1;
+        let playerExp = parseFloat(localStorage.getItem('poring_player_exp')) || 0;
+        let maxExp = parseFloat(localStorage.getItem('poring_max_exp')) || 100;
+        let playerHp = parseInt(localStorage.getItem('poring_player_hp')) || 500;
+        let maxHp = parseInt(localStorage.getItem('poring_max_hp')) || 500;
+        let playerSp = parseInt(localStorage.getItem('poring_player_sp')) || 50;
+        let maxSp = parseInt(localStorage.getItem('poring_max_sp')) || 50;
+        let playerGold = parseInt(localStorage.getItem('poring_player_gold')) || 500;
+        let weaponTier = parseInt(localStorage.getItem('poring_weapon_tier')) || 0;
+        let armorTier = parseInt(localStorage.getItem('poring_armor_tier')) || 0;
+        let durability = parseInt(localStorage.getItem('poring_durability')) || 100;
+        let currentHardcoreMultiplier = parseFloat(localStorage.getItem('poring_hardcore_mult')) || 1;
+        let expMultiplier = parseInt(localStorage.getItem('poring_exp_multi')) || 1;
+        let critRate = parseInt(localStorage.getItem('poring_crit_rate')) || 10;
+        let monsterMaxHp = parseInt(localStorage.getItem('poring_monster_max_hp')) || 50;
+        let monsterHp = parseInt(localStorage.getItem('poring_monster_hp')) || 50;
+        let monsterLevel = parseInt(localStorage.getItem('poring_monster_level')) || 1;
+        let killCount = parseInt(localStorage.getItem('poring_kill_count')) || 0;
+        let isMvpActive = localStorage.getItem('poring_is_mvp') === 'true';
 
         let spinCoins = parseInt(localStorage.getItem('poring_spin_coins')) || 50;
         let currentSpinCost = parseInt(localStorage.getItem('poring_spin_cost')) || 50;
@@ -466,32 +449,31 @@ if (!$player) {
                 localStorage.setItem('poring_balmung_unlocked', balmungUnlocked); 
                 localStorage.setItem('poring_aesprika_unlocked', aesprikaUnlocked);
 
-                let fd = new FormData();
-                fd.append('action', 'save'); fd.append('level', playerLevel); fd.append('exp', playerExp); fd.append('max_exp', maxExp);
-                fd.append('hp', playerHp); fd.append('max_hp', maxHp); fd.append('sp', playerSp); fd.append('max_sp', maxSp);
-                fd.append('gold', playerGold); fd.append('bonus_dmg', 0); fd.append('weapon_tier', weaponTier); fd.append('bonus_hp', 0);
-                fd.append('armor_tier', armorTier); fd.append('refine_level', 0); fd.append('durability', durability);
-                fd.append('hardcore_multiplier', currentHardcoreMultiplier); fd.append('exp_multiplier', expMultiplier); fd.append('crit_rate', critRate);
-                fd.append('monster_max_hp', monsterMaxHp); fd.append('monster_hp', monsterHp); fd.append('monster_level', monsterLevel);
-                fd.append('kill_count', killCount); fd.append('is_mvp', isMvpActive ? 1 : 0);
-
-                fetch('index.php', { method: 'POST', body: fd }).catch(e => {});
+                localStorage.setItem('poring_player_level', playerLevel);
+                localStorage.setItem('poring_player_exp', playerExp);
+                localStorage.setItem('poring_max_exp', maxExp);
+                localStorage.setItem('poring_player_hp', playerHp);
+                localStorage.setItem('poring_max_hp', maxHp);
+                localStorage.setItem('poring_player_sp', playerSp);
+                localStorage.setItem('poring_max_sp', maxSp);
+                localStorage.setItem('poring_player_gold', playerGold);
+                localStorage.setItem('poring_weapon_tier', weaponTier);
+                localStorage.setItem('poring_armor_tier', armorTier);
+                localStorage.setItem('poring_durability', durability);
+                localStorage.setItem('poring_hardcore_mult', currentHardcoreMultiplier);
+                localStorage.setItem('poring_crit_rate', critRate);
+                localStorage.setItem('poring_monster_max_hp', monsterMaxHp);
+                localStorage.setItem('poring_monster_hp', monsterHp);
+                localStorage.setItem('poring_monster_level', monsterLevel);
+                localStorage.setItem('poring_kill_count', killCount);
+                localStorage.setItem('poring_is_mvp', isMvpActive);
             } catch (e) {}
         }
 
         function resetGame() {
-            if (confirm("⚠️ PERINGATAN KERAS!\nApakah Anda yakin ingin mereset seluruh progres & Database?")) {
-                let fd = new FormData(); fd.append('action', 'reset');
-                fetch('index.php', { method: 'POST', body: fd })
-                .then(res => res.json())
-                .then(data => {
-                    localStorage.clear();
-                    location.reload();
-                })
-                .catch(() => {
-                    localStorage.clear();
-                    location.reload();
-                });
+            if (confirm("⚠️ PERINGATAN KERAS!\nApakah Anda yakin ingin mereset seluruh progres game?")) {
+                localStorage.clear();
+                location.reload();
             }
         }
 
@@ -694,7 +676,7 @@ if (!$player) {
             monsterLevel = playerLevel;
 
             document.getElementById('char-level-badge').innerText = "Lv. " + playerLevel + " Hero";
-            document.getElementById('char-tier-info').innerText = (localStorage.getItem('poring_current_biome_name') || "Poring") + " Slayer";
+            document.getElementById('char-tier-info').innerText = currentBiomeName + " Slayer";
             document.getElementById('hp-bar').style.width = Math.min(100, (playerHp / maxHp) * 100) + '%';
             document.getElementById('hp-text').innerText = playerHp + '/' + maxHp;
             document.getElementById('sp-bar').style.width = Math.min(100, (playerSp / maxSp) * 100) + '%';
